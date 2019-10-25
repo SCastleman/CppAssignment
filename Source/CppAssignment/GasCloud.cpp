@@ -9,6 +9,7 @@ AGasCloud::AGasCloud()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	SetAutonomousProxy(true);
 
 }
 
@@ -23,14 +24,12 @@ void AGasCloud::BeginPlay()
 void AGasCloud::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 	
-	for (auto It = PlayerTargets.CreateIterator(); It; ++It)
+	for (ACppAssignmentCharacter* Target: PlayerTargets)
 	{
-		ACppAssignmentCharacter* tempChar = *It;
-		tempChar->ServerSetHealth(1);
-		bool tempbool = HasAuthority();
-		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, "" + HasAuthority());
+		if (Role == ROLE_Authority) {
+			Target->ServerSetHealth(-0.02);
+		}
 	}
 }
 	

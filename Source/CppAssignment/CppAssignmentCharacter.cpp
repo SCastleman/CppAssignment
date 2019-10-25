@@ -12,6 +12,9 @@
 #include "MotionControllerComponent.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 #include "Engine/Engine.h"
+#include "GasCloud.h"
+#include "UnrealNetwork.h"
+#include <iostream>
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -88,13 +91,33 @@ ACppAssignmentCharacter::ACppAssignmentCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-void ACppAssignmentCharacter::Tick(float DeltaTime)
+void ACppAssignmentCharacter::Tick(float DeltaSeconds)
 {
-	Super::Tick(DeltaTime);
+	Super::Tick(DeltaSeconds);
 	CallMyTrace();
-	if (this->GetVelocity() != FVector(0,0,0))
+	if (GetVelocity() != FVector(0,0,0) && !IsOutOfStamina)
 	{
-		
+		Stamina -= 0.02;
+		if (Stamina <= 0)
+		{
+			IsOutOfStamina = true;
+			SpeedFramesRemaining = 0;
+			CurrentWalkSpeed = DefaultSpeed * 0.8;
+			GetCharacterMovement()->MaxWalkSpeed = CurrentWalkSpeed;
+		}
+	}
+	if (SpeedFramesRemaining > 0)
+	{
+		SpeedFramesRemaining -= 0;
+	}
+	else if (SpeedFramesRemaining == 0 && CurrentWalkSpeed > DefaultSpeed)
+	{
+		CurrentWalkSpeed = DefaultSpeed;
+		GetCharacterMovement()->MaxWalkSpeed = CurrentWalkSpeed;
+	}
+	if (Joy > 0)
+	{
+		ServerSetJoy(-0.02);
 	}
 }
 
@@ -117,24 +140,103 @@ void ACppAssignmentCharacter::BeginPlay()
 		VR_Gun->SetHiddenInGame(true, true);
 		Mesh1P->SetHiddenInGame(false, true);
 	}
+
 }
 
 //////////////////////////////////////////////////////////////////////////
 // Input
 
-void ACppAssignmentCharacter::ServerSetHealth_Implementation(uint8 number)
+void ACppAssignmentCharacter::SetJoyBool(bool NewBool)
 {
-	
+	IsOutOfJoy = NewBool;
+	if (IsOutOfJoy)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = DefaultSpeed * 0.8;
+	}
+	else
+	{
+		GetCharacterMovement()->MaxWalkSpeed = DefaultSpeed;
+	}
 }
 
-bool ACppAssignmentCharacter::ServerSetHealth_Validate(uint8 number)
+void ACppAssignmentCharacter::ServerSetHealth_Implementation(float number)
+{
+	auto tempRole = Role;
+
+	Health += number;
+	if (Health <= 0)
+	{
+		//implement game over here
+	}
+	else if (Health > 100)
+	{
+		Health = 100;
+	}
+}
+
+bool ACppAssignmentCharacter::ServerSetHealth_Validate(float number)
 {
 	return true;
 }
 
+void ACppAssignmentCharacter::ServerSetStamina_Implementation(float number)
+{
+	Stamina += number;
+}
+
+bool ACppAssignmentCharacter::ServerSetStamina_Validate(float number)
+{
+	return true;
+}
+
+void ACppAssignmentCharacter::ServerSetJoy_Implementation(float number)
+{
+	Joy += number;
+	if (Joy <= 0)
+	{
+		IsOutOfJoy = false;
+	}
+}
+
+bool ACppAssignmentCharacter::ServerSetJoy_Validate(float number)
+{
+	return true;
+}
+
+void ACppAssignmentCharacter::ServerSetSpeed_Implementation(float number)
+{
+	if (number > 0)
+	{
+		SpeedFramesRemaining = 1800;
+	}
+	CurrentWalkSpeed = DefaultSpeed * number;
+	GetCharacterMovement()->MaxWalkSpeed = CurrentWalkSpeed;
+}
+bool ACppAssignmentCharacter::ServerSetSpeed_Validate(float number)
+{
+	return true;
+}
+
+void ACppAssignmentCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	float MaxSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
+	DOREPLIFETIME(ACppAssignmentCharacter, Joy);
+	DOREPLIFETIME(ACppAssignmentCharacter, Stamina);
+	DOREPLIFETIME(ACppAssignmentCharacter, Health);
+	DOREPLIFETIME(ACppAssignmentCharacter, DefaultSpeed);
+	DOREPLIFETIME(ACppAssignmentCharacter, CurrentWalkSpeed);
+	
+}
+
+
 void ACppAssignmentCharacter::UseItem()
 {
-	CurrentPickup->applyBuffs(this);
+	if (CurrentPickup) {
+		CurrentPickup->ApplyBuffs(this);
+	}
 }
 
 void ACppAssignmentCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -142,17 +244,9 @@ void ACppAssignmentCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	// set up gameplay key bindings
 	check(PlayerInputComponent);
 
-	// Bind jump events
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	//Bind pickup event
 
-	// Bind fire event
-	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &ACppAssignmentCharacter::OnFire);
-
-	// Enable touchscreen input
-	EnableTouchscreenMovement(PlayerInputComponent);
-
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ACppAssignmentCharacter::OnResetVR);
+	PlayerInputComponent->BindAction("Use", IE_Pressed, this, &ACppAssignmentCharacter::UseItem);
 
 	// Bind movement events
 	PlayerInputComponent->BindAxis("MoveForward", this, &ACppAssignmentCharacter::MoveForward);
@@ -226,10 +320,6 @@ void ACppAssignmentCharacter::BeginTouch(const ETouchIndex::Type FingerIndex, co
 	{
 		return;
 	}
-	if ((FingerIndex == TouchItem.FingerIndex) && (TouchItem.bMoved == false))
-	{
-		OnFire();
-	}
 	TouchItem.bIsPressed = true;
 	TouchItem.FingerIndex = FingerIndex;
 	TouchItem.Location = Location;
@@ -245,44 +335,6 @@ void ACppAssignmentCharacter::EndTouch(const ETouchIndex::Type FingerIndex, cons
 	TouchItem.bIsPressed = false;
 }
 
-//Commenting this section out to be consistent with FPS BP template.
-//This allows the user to turn without using the right virtual joystick
-
-//void ACppAssignmentCharacter::TouchUpdate(const ETouchIndex::Type FingerIndex, const FVector Location)
-//{
-//	if ((TouchItem.bIsPressed == true) && (TouchItem.FingerIndex == FingerIndex))
-//	{
-//		if (TouchItem.bIsPressed)
-//		{
-//			if (GetWorld() != nullptr)
-//			{
-//				UGameViewportClient* ViewportClient = GetWorld()->GetGameViewport();
-//				if (ViewportClient != nullptr)
-//				{
-//					FVector MoveDelta = Location - TouchItem.Location;
-//					FVector2D ScreenSize;
-//					ViewportClient->GetViewportSize(ScreenSize);
-//					FVector2D ScaledDelta = FVector2D(MoveDelta.X, MoveDelta.Y) / ScreenSize;
-//					if (FMath::Abs(ScaledDelta.X) >= 4.0 / ScreenSize.X)
-//					{
-//						TouchItem.bMoved = true;
-//						float Value = ScaledDelta.X * BaseTurnRate;
-//						AddControllerYawInput(Value);
-//					}
-//					if (FMath::Abs(ScaledDelta.Y) >= 4.0 / ScreenSize.Y)
-//					{
-//						TouchItem.bMoved = true;
-//						float Value = ScaledDelta.Y * BaseTurnRate;
-//						AddControllerPitchInput(Value);
-//					}
-//					TouchItem.Location = Location;
-//				}
-//				TouchItem.Location = Location;
-//			}
-//		}
-//	}
-//}
-//
 
 void ACppAssignmentCharacter::MoveForward(float Value)
 {
@@ -321,8 +373,6 @@ bool ACppAssignmentCharacter::EnableTouchscreenMovement(class UInputComponent* P
 		PlayerInputComponent->BindTouch(EInputEvent::IE_Pressed, this, &ACppAssignmentCharacter::BeginTouch);
 		PlayerInputComponent->BindTouch(EInputEvent::IE_Released, this, &ACppAssignmentCharacter::EndTouch);
 
-		//Commenting this out to be more consistent with FPS BP template.
-		//PlayerInputComponent->BindTouch(EInputEvent::IE_Repeat, this, &ACppAssignmentCharacter::TouchUpdate);
 		return true;
 	}
 	
@@ -366,14 +416,9 @@ bool ACppAssignmentCharacter::Trace(
 	TraceParams.bReturnPhysicalMaterial = ReturnPhysMat;
 
 	// Add our ActorsToIgnore
-	TraceParams.AddIgnoredActors(ActorsToIgnore);
 
-	// When we're debugging it is really useful to see where our trace is in the world
-	// We can use World->DebugDrawTraceTag to tell Unreal to draw debug lines for our trace
-	// (remove these lines to remove the debug - or better create a debug switch!)
-	const FName TraceTag("MyTraceTag");
-	World->DebugDrawTraceTag = TraceTag;
-	TraceParams.TraceTag = TraceTag;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AGasCloud::StaticClass(), ActorsToIgnore);
+	TraceParams.AddIgnoredActors(ActorsToIgnore);
 
 
 	// Force clear the HitData which contains our results
@@ -389,7 +434,7 @@ bool ACppAssignmentCharacter::Trace(
 			TraceParams
 		);
 
-	// If we hit an actor, return true
+	// If we hit an actor, return trued
 	return (HitOut.GetActor() != NULL);
 }
 
@@ -424,7 +469,6 @@ void ACppAssignmentCharacter::CallMyTrace()
 		if (HitData.GetActor())
 		{
 
-			//UE_LOG(LogClass, Warning, TEXT("This a testing statement. %s"), *HitData.GetActor()->GetName());
 			ProcessTraceHit(HitData);
 
 		}
@@ -470,7 +514,6 @@ void ACppAssignmentCharacter::ProcessTraceHit(FHitResult& HitOut)
 		//PickupDisplayText = TestPickup->GetPickupDisplayText();
 		//PickupFound = true;
 	} else {
-		
 	CurrentPickup = nullptr;
 	PickupName = NULL;
 		

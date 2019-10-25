@@ -10,10 +10,14 @@ UCLASS()
 class CPPASSIGNMENT_API APickup : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	APickup();
+
+	UPROPERTY(BlueprintReadWrite)
+		FString Name;
+
 
 protected:
 	// Called when the game starts or when spawned
@@ -23,13 +27,15 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	UPROPERTY(BlueprintReadWrite)
-	FString Name;
-
 	UFUNCTION(BlueprintCallable)
 		FString GetPickupName() { return Name; }
 	
-	UFUNCTION(BlueprintCallable, BlueprintImplementableEvent)
-		void applyBuffs(AActor* target);
+	UFUNCTION(BlueprintCallable)
+		void ApplyBuffs(AActor* TargetActor);
+
+	UFUNCTION(Server, WithValidation, Reliable)
+		void ServerDestroySelf();
+	bool ServerDestroySelf_Validate();
+	void ServerDestroySelf_Implementation();
 	
 };

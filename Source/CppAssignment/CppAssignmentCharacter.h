@@ -123,7 +123,8 @@ protected:
 	void BeginTouch(const ETouchIndex::Type FingerIndex, const FVector Location);
 	void EndTouch(const ETouchIndex::Type FingerIndex, const FVector Location);
 	void TouchUpdate(const ETouchIndex::Type FingerIndex, const FVector Location);
-	TouchData	TouchItem;
+	
+	TouchData TouchItem;
 
 	UPROPERTY(BlueprintReadWrite)
 		APickup* CurrentPickup;
@@ -131,33 +132,50 @@ protected:
 	UPROPERTY(BlueprintReadWrite)
 		FString PickupName;
 	
-	UPROPERTY(BlueprintReadWrite)
-		uint8 Health = 100;
+	UPROPERTY(BlueprintReadWrite, Replicated)
+		float Health = 50;
 
-	UPROPERTY(BlueprintReadWrite)
-		uint8 Stamina = 100;
+	UPROPERTY(BlueprintReadWrite, Replicated)
+		float Stamina = 50;
 
-	UPROPERTY(BlueprintReadWrite)
-		uint8 Joy = 100;
+	UPROPERTY(BlueprintReadWrite, Replicated)
+		float Joy = 50;
 
-	UPROPERTY()
-	    float defaultSpeed = GetCharacterMovement()->MaxWalkSpeed;
+	UPROPERTY(BlueprintReadWrite, Replicated)
+	    float DefaultSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
+	UPROPERTY(BlueprintReadWrite, Replicated)
+		float CurrentWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
+	bool IsOutOfJoy = false;
+	void SetJoyBool(bool NewBool);
+	bool IsOutOfStamina = false;
+
+	int SpeedFramesRemaining = 0;
 
 public:
 	UFUNCTION(Reliable, Server, WithValidation)
-		void ServerSetHealth(uint8 number);
+		void ServerSetHealth(float number);
 
-	void ServerSetHealth_Implementation(uint8 number);
-	bool ServerSetHealth_Validate(uint8 number);
+	void ServerSetHealth_Implementation(float number);
+	bool ServerSetHealth_Validate(float number);
 
-	UFUNCTION(BlueprintCallable)
-		void SetHealth(uint8 number) { Health += number; }
-	
-	UFUNCTION(BlueprintCallable)
-		void SetStamina(uint8 number) { Stamina += number; }
+	UFUNCTION(Reliable, Server, WithValidation)
+		void ServerSetStamina(float number);
 
-	UFUNCTION(BlueprintCallable)
-		void SetJoy(uint8 number) { Joy += number; }
+		void ServerSetStamina_Implementation(float number);
+		bool ServerSetStamina_Validate(float number);
+
+	UFUNCTION(Reliable, Server, WithValidation)
+		void ServerSetJoy(float number);
+
+	void ServerSetJoy_Implementation(float number);
+	bool ServerSetJoy_Validate(float number);
+
+	UFUNCTION(Reliable, Server, WithValidation)
+		void ServerSetSpeed(float number);
+	void ServerSetSpeed_Implementation(float number);
+	bool ServerSetSpeed_Validate(float number);
 
 	UFUNCTION(BlueprintCallable)
 		void UseItem();

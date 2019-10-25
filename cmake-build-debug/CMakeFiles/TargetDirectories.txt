@@ -1,0 +1,15 @@
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/UE4Editor-Win64-DebugGame.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/UE4Game-Win64-DebugGame.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/UE4Editor-Win64-Shipping.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/UE4Editor.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/CppAssignment.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/CppAssignmentEditor-Win64-DebugGame.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/UE4Game-Win64-Shipping.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/UE4Game.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/CppAssignment-Win64-Shipping.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/CppAssignment-Win64-DebugGame.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/CppAssignmentEditor-Win64-Shipping.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/CppAssignmentEditor.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/FakeTarget.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/Sam Castleman/Documents/Unreal Projects/CppAssignment/cmake-build-debug/CMakeFiles/rebuild_cache.dir
